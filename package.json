@@ -10,7 +10,8 @@
     "@inquirer/prompts": "^4.3.0",
     "cross-spawn": "^7.0.3",
     "typescript": "^5.4.3",
-    "youtube-transcript": "^1.1.0"
+    "youtube-transcript": "^1.1.0",
+    "openai": "^4.47.1"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",

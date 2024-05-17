@@ -32,6 +32,29 @@ export const CLAUDE_MODELS = [
   }
 ] as const;
 
+/**
+ * Supported OpenAI models for meta inference and page generation.
+ */
+export const OPENAI_MODELS = [
+  {
+    name: "GPT-4 omni",
+    model: "gpt-4o",
+    smarterDescription: "Most capable GPT-4o model for complex tasks.",
+    pageDescription: "Smartest - Ideal for nuanced writing and analysis"
+  },
+  {
+    name: "GPT-3.5 Turbo",
+    model: "gpt-3.5-turbo",
+    smarterDescription: "Versatile and capable GPT-3.5 model.",
+    pageDescription: "Balanced - Good for most use cases"  
+  }
+] as const;
+
+/**
+ * Type representing the supported model providers.
+ */
+export type ModelProvider = "claude" | "openai";
+
 export const EDITORS = [
   { name: "nano", command: "nano" },
   { name: "vim but know you can never leave", command: "vim" },
