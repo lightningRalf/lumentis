@@ -16,16 +16,19 @@ import {
 import {
   CLAUDE_PRIMARYSOURCE_BUDGET,
   getClaudeCosts,
-  runClaudeInference
+  runClaudeInference,
+  runOpenAIInference //, P578e, P9ebb: Importing the runOpenAIInference function
 } from "./ai";
 import {
   CLAUDE_MODELS,
+  OPENAI_MODELS, //, P578e, P9ebb: Including OPENAI_MODELS in the import
   EDITORS,
   LUMENTIS_FOLDER,
   RUNNERS,
   WRITING_STYLE_SIZE_LIMIT,
   lumentisFolderPath,
-  wizardStatePath
+  wizardStatePath,
+  ModelProvider //, P578e, P9ebb: Importing ModelProvider type
 } from "./constants";
 import { generatePages, idempotentlySetupNextraDocs } from "./page-generator";
 import {
@@ -91,7 +94,12 @@ async function runWizard() {
     choices: [
       ...CLAUDE_MODELS.map((model) => ({
         name: model.name,
-        value: model.model,
+        value: { provider: "claude", model: model.model }, //, P578e, P9ebb: Adjusting value to include provider
+        description: model.smarterDescription
+      })),
+      ...OPENAI_MODELS.map((model) => ({ //, P578e, P9ebb: Adding OpenAI models to the choices
+        name: model.name,
+        value: { provider: "openai", model: model.model }, //, P578e, P9ebb: Adjusting value to include provider
         description: model.smarterDescription
       })),
       new Separator()

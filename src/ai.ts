@@ -1,12 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
+import { Configuration, OpenAIApi } from 'openai';
 import { MessageParam } from "@anthropic-ai/sdk/resources";
 import { countTokens } from "@anthropic-ai/tokenizer";
 import {
   MESSAGES_FOLDER,
   NUMBER_OF_CHARACTERS_TO_FLUSH_TO_FILE,
-  lumentisFolderPath
+  lumentisFolderPath,
+  ModelProvider,
+  config
 } from "./constants";
 import {
   getOutlineInferenceMessages,
@@ -198,23 +201,123 @@ export async function runClaudeInference(
   }
 }
 
-export function getClaudeCosts(
+/**
+ * Runs an OpenAI inference with the given messages and parameters.
+ * @param messages The messages to send to the OpenAI API.
+ * @param model The OpenAI model to use for the inference.
+ * @param maxOutputTokens The maximum number of output tokens to generate.
+ * @returns The generated response from the OpenAI API.
+ * @throws An error if the OpenAI API call fails.
+ */
+async function runOpenAIInference(
+  messages: MessageParam[],
+  model: string,
+  maxOutputTokens: number
+) {
+  try {
+    const configuration = new Configuration({
+      apiKey: config.openai.apiKey,
+      basePath: config.openai.apiEndpoint,
+    });
+    const openai = new OpenAIApi(configuration);
+
+    // Make the API call to OpenAI
+    const response = await openai.createChatCompletion({
+      model: model,
+      messages: messages.map(message => ({ role: message.role, content: message.content })),
+      max_tokens: maxOutputTokens,
+    });
+
+    // Process the response
+    return {
+      success: true,
+      response: response.data.choices[0].message.content
+    };
+  } catch (error) {
+    console.error('Error during OpenAI inference:', error);
+    // Handle the error appropriately (e.g., throw, return an error response)
+    throw error;
+  }
+}
+
+/**
+ * Calculates the cost of running a model inference based on the provider and model.
+ * @param messages The messages to send to the model API.
+ * @param outputTokensExpected The expected number of output tokens.
+ * @param model The model to use for the inference.
+ * @param provider The provider of the model (claude or openai).
+ * @returns The calculated cost of the inference.
+ * @throws An error if an unsupported model provider is specified.
+ */
+export function getModelCosts(
+  messages: MessageParam[],
+  outputTokensExpected: number,
+  model: string,
+  provider: ModelProvider
+) {
+  if (provider === "claude") {
+    return getClaudeCosts(messages, outputTokensExpected, model);
+  } else if (provider === "openai") {
+    return getOpenAICosts(messages, outputTokensExpected, model);
+  } else {
+    throw new Error(`Unsupported model provider: ${provider}`);
+  }
+}
+
+/**
+ * Calculates the cost of running a model inference based on the provider, model, and input prompt.
+ * @param inputPrompt The input prompt to send to the model API.
+ * @param outputTokensExpected The expected number of output tokens.
+ * @param model The model to use for the inference.
+ * @param provider The provider of the model (claude or openai).
+ * @returns The calculated cost of the inference.
+ * @throws An error if an unsupported model provider is specified.
+ */
+export function getModelCostsFromText(
+  inputPrompt: string,
+  outputTokensExpected: number,
+  model: string,
+  provider: ModelProvider
+) {
+  if (provider === "claude") {
+    return getClaudeCostsFromText(inputPrompt, outputTokensExpected, model);
+  } else if (provider === "openai") {
+    return getOpenAICostsFromText(inputPrompt, outputTokensExpected, model);
+  } else {
+    throw new Error(`Unsupported model provider: ${provider}`);
+  }
+}
+
+/**
+ * Calculates the cost of running an OpenAI inference based on the messages and model.
+ * @param messages The messages to send to the OpenAI API.
+ * @param outputTokensExpected The expected number of output tokens.
+ * @param model The OpenAI model to use for the inference.
+ * @returns The calculated cost of the OpenAI inference.
+ */
+function getOpenAICosts(
   messages: MessageParam[],
   outputTokensExpected: number,
   model: string
 ) {
-  const inputText: string = messages.map((m) => m.content).join("\n");
-  return getClaudeCostsFromText(inputText, outputTokensExpected, model);
+  const inputText: string = messages.map((m) => m.content).join('\n');
+  return getOpenAICostsFromText(inputText, outputTokensExpected, model);
 }
 
-export function getClaudeCostsFromText(
+/**
+ * Calculates the cost of running an OpenAI inference based on the input prompt and model.
+ * @param inputPrompt The input prompt to send to the OpenAI API.
+ * @param outputTokensExpected The expected number of output tokens.
+ * @param model The OpenAI model to use for the inference.
+ * @returns The calculated cost of the OpenAI inference.
+ */
+function getOpenAICostsFromText(
   inputPrompt: string,
   outputTokensExpected: number,
   model: string
 ) {
   const inputTokens = countTokens(inputPrompt);
-
-  return getClaudeCostsWithTokens(inputTokens, outputTokensExpected, model);
+  return getOpenAICostsWithTokens(inputTokens, outputTokensExpected, model);
 }
 
 function getClaudeCostsWithTokens(
